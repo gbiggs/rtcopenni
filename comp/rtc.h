@@ -22,18 +22,9 @@
 
 #include <rtm/Manager.h>
 #include <rtm/DataFlowComponentBase.h>
+#include <rtm/idl/InterfaceDataTypes.hh>
 #include <rtm/OutPort.h>
 #include <XnCppWrapper.h>
-
-
-// Base exception
-class BaseRTCError : public std::runtime_error
-{
-    public:
-        BaseRTCError(const std::string &arg)
-            : std::runtime_error(std::string("Base error ") + arg)
-        {}
-};
 
 
 class RTCOpenNI
@@ -59,18 +50,22 @@ class RTCOpenNI
 
         bool enable_depth_;
         unsigned int dm_fps_;
-        unsigned int dm_x;
-        unsigned int dm_y;
+        unsigned int dm_x_;
+        unsigned int dm_y_;
         bool enable_image_;
         unsigned int im_fps_;
-        unsigned int im_x;
-        unsigned int im_y;
+        unsigned int im_x_;
+        unsigned int im_y_;
 
         xn::Context xnc_;
         xn::DepthGenerator depth_gen_;
         xn::ImageGenerator image_gen_;
-        float no_sample_val_;
-        float shadow_val_;
+        XnUInt64 no_sample_val_;
+        XnUInt64 shadow_val_;
+        XnUInt64 min_depth_;
+        XnUInt64 max_depth_;
+        XnDouble pixel_size_;
+        XnUInt64 depth_focal_length_;
 
         RTC::ReturnCode_t publish_depth();
         RTC::ReturnCode_t publish_image();

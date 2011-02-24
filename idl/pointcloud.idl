@@ -17,7 +17,7 @@
 #ifndef POINTCLOUD_IDL__
 #define POINTCLOUD_IDL__
 
-#include "BasicDataTypes.idl"
+#include "BasicDataType.idl"
 
 module PointCloudTypes
 {
@@ -57,9 +57,13 @@ module PointCloudTypes
     // "b": offset 14, uint8, 1 byte length
     struct PointField
     {
+        // Name of the field
         string name;
+        // Offset into a point of the field's data
         unsigned long offset;
-        DataType datatype;
+        // Data type used by the field
+        DataType data_type;
+        // Number of bytes in the field
         unsigned long count;
     };
     typedef sequence<PointField> PointFieldList;
@@ -93,8 +97,6 @@ module PointCloudTypes
         // True if there are no invalid points.
         boolean is_dense;
     };
-};
-
 }; // module RTC
 
 #endif // POINTCLOUD_IDL__

@@ -25,11 +25,11 @@ void ModuleInit(RTC::Manager* manager)
 {
     rtc_init(manager);
     RTC::RtcBase* comp;
-    comp = manager->createComponent("<COMP>");
+    comp = manager->createComponent("rtcopenni");
 
     if (comp == NULL)
     {
-        std::cerr << "<COMP> component creation failed." << std::endl;
+        std::cerr << "RTC:OpenNI component creation failed." << std::endl;
         abort();
     }
 }

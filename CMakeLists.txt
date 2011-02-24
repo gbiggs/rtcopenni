@@ -17,10 +17,9 @@ ADD_CUSTOM_TARGET (uninstall "${CMAKE_COMMAND}" -P
     "${PROJECT_BINARY_DIR}/uninstall_target.cmake")
 
 # Component source files
-set(comp_srcs comp/rtc.cpp
-              comp/service_impl.cpp)
+set(comp_srcs comp/rtc.cpp)
 set(standalone_srcs comp/standalone.cpp)
-set(idls)
+set(idls pointcloud)
 
 # Compile the built-in IDL files
 COMPILE_IDL_FILES(${PROJECT_SOURCE_DIR}/idl ${idls})
@@ -46,12 +45,12 @@ if(openrtm-aist_CFLAGS)
     set_source_files_properties(${comp_srcs} ${proxy_srcs}
         PROPERTIES COMPILE_FLAGS "${openrtm-aist_CFLAGS}")
 endif(openrtm-aist_CFLAGS)
-include_directories(${OPENNI_PREFIX}/include)
+include_directories(${OPENNI_PREFIX}/include/ni)
 
 add_library(rtcopenni SHARED ${comp_srcs} ${proxy_srcs} ${_idl_srcs})
 add_executable(rtcopenni_standalone ${standalone_srcs})
 
-target_link_libraries(rtcopenni_standalone rtc)
+target_link_libraries(rtcopenni_standalone rtcopenni)
 if(openrtm-aist_LINK_FLAGS)
     set_target_properties(rtcopenni PROPERTIES
         LINK_FLAGS "${openrtm-aist_LINK_FLAGS}")
@@ -82,5 +81,5 @@ set(RTC_EXECUTABLES "rtcopenni_standalone" "RTC:OpenNI")
 configure_file("${PROJECT_SOURCE_DIR}/cmake/cpack_options.cmake.in"
     "${PROJECT_BINARY_DIR}/cpack_options.cmake" @ONLY)
 set(CPACK_PROJECT_CONFIG_FILE "${PROJECT_BINARY_DIR}/cpack_options.cmake")
-include(cpack)
+#include(cpack)
 
