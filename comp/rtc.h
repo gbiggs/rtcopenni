@@ -17,14 +17,13 @@
 #ifndef RTC_H__
 #define RTC_H__
 
+
+#include "idl/pointcloud.hh"
+
 #include <rtm/Manager.h>
 #include <rtm/DataFlowComponentBase.h>
 #include <rtm/OutPort.h>
-//#include <rtm/CorbaPort.h>
-//#include "service_impl.h"
 #include <XnCppWrapper.h>
-
-using namespace RTC;
 
 
 // Base exception
@@ -47,18 +46,22 @@ class RTCOpenNI
         virtual RTC::ReturnCode_t onInitialize();
         virtual RTC::ReturnCode_t onFinalize();
         virtual RTC::ReturnCode_t onActivated(RTC::UniqueId ec_id);
-        //virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
+        virtual RTC::ReturnCode_t onDeactivated(RTC::UniqueId ec_id);
         virtual RTC::ReturnCode_t onExecute(RTC::UniqueId ec_id);
 
     private:
-        RTC:: _;
-        RTC::OutPort<RTC::> _port_;
-        //ServiceProvider svc_prov_;
-        //RTC::CorbaPort svc_port_;
+        PointCloudTypes::PointCloud cloud_;
+        RTC::OutPort<PointCloudTypes::PointCloud> cloud_port_;
+        RTC::CameraImage depth_map_;
+        RTC::OutPort<RTC::CameraImage> depth_map_port_;
+        RTC::CameraImage image_;
+        RTC::OutPort<RTC::CameraImage> image_port_;
 
+        bool enable_depth_;
         unsigned int dm_fps_;
         unsigned int dm_x;
         unsigned int dm_y;
+        bool enable_image_;
         unsigned int im_fps_;
         unsigned int im_x;
         unsigned int im_y;
@@ -66,6 +69,11 @@ class RTCOpenNI
         xn::Context xnc_;
         xn::DepthGenerator depth_gen_;
         xn::ImageGenerator image_gen_;
+        float no_sample_val_;
+        float shadow_val_;
+
+        RTC::ReturnCode_t publish_depth();
+        RTC::ReturnCode_t publish_image();
 };
 
 
