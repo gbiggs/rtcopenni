@@ -66,6 +66,8 @@ class RTCOpenNI
         XnUInt64 max_depth_;
         XnDouble pixel_size_;
         XnUInt64 depth_focal_length_;
+        double proj_const_;
+        double centre_x_, centre_y_;
 
         RTC::ReturnCode_t publish_depth();
         RTC::ReturnCode_t publish_image();

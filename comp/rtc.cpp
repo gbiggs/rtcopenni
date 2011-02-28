@@ -19,6 +19,24 @@
 #include <limits>
 
 
+union f_to_c
+{
+    unsigned char bytes[4];
+    float val;
+};
+
+
+void pack_float(_CORBA_Unbounded_Sequence_Octet &dest, float val, unsigned int offset)
+{
+    f_to_c temp;
+    temp.val = val;
+    dest[offset] = temp.bytes[0];
+    dest[offset + 1] = temp.bytes[1];
+    dest[offset + 2] = temp.bytes[2];
+    dest[offset + 3] = temp.bytes[3];
+}
+
+
 RTCOpenNI::RTCOpenNI(RTC::Manager* manager)
     : RTC::DataFlowComponentBase(manager),
     cloud_port_("points", cloud_),
@@ -27,7 +45,8 @@ RTCOpenNI::RTCOpenNI(RTC::Manager* manager)
     enable_depth_(true), dm_fps_(30), dm_x_(640), dm_y_(480),
     enable_image_(true), im_fps_(30), im_x_(640), im_y_(480),
     no_sample_val_(0), shadow_val_(0), min_depth_(0), max_depth_(0),
-    pixel_size_(0.0), depth_focal_length_(0)
+    pixel_size_(0.0), depth_focal_length_(0),
+    proj_const_(0.0), centre_x_(0.0), centre_y_(0.0)
 {
 }
 
@@ -95,66 +114,8 @@ RTC::ReturnCode_t RTCOpenNI::onActivated(RTC::UniqueId ec_id)
 
     std::cout << "Activating\n";
 
-    // Apply configuration
+    // Apply configuration and get device parameters
     XnMapOutputMode output_mode;
-    if (enable_depth_)
-    {
-        std::cout << "Enabling depth\n";
-        output_mode.nXRes = dm_x_;
-        output_mode.nYRes = dm_y_;
-        output_mode.nFPS = dm_fps_;
-        if ((res = depth_gen_.SetMapOutputMode(output_mode)) != XN_STATUS_OK)
-        {
-            std::cerr << "RTC:OpenNI: Failed to configure depth node: " <<
-                xnGetStatusString(res) << '\n';
-            return RTC::RTC_ERROR;
-        }
-        depth_map_.width = dm_x_;
-        depth_map_.height = dm_y_;
-        depth_map_.bpp = 32;
-        depth_map_.format = "DEPTH";
-        depth_map_.fDiv = 1.0;
-        depth_map_.pixels.length(dm_x_ * dm_y_ * 4);
-
-        cloud_.fields.length(3);
-        cloud_.fields[0].name = "x";
-        cloud_.fields[0].offset = 0;
-        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
-        cloud_.fields[0].count = 4;
-        cloud_.fields[0].name = "y";
-        cloud_.fields[0].offset = 4;
-        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
-        cloud_.fields[0].count = 4;
-        cloud_.fields[0].name = "z";
-        cloud_.fields[0].offset = 8;
-        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
-        cloud_.fields[0].count = 4;
-        cloud_.point_step = 12;
-        cloud_.row_step = dm_x_ * 12;
-        cloud_.is_bigendian = false;
-        cloud_.is_dense = false;
-        if ((res = depth_gen_.GetIntProperty("ZPD", depth_focal_length_)) !=
-                XN_STATUS_OK)
-        {
-            std::cerr << "RTC:OpenNI: Failed to get depth focal length: " <<
-                xnGetStatusString(res) << '\n';
-            return RTC::RTC_ERROR;
-        }
-        std::cout << "Depth focal length " << depth_focal_length_ << '\n';
-    }
-    if (enable_image_)
-    {
-        output_mode.nXRes = im_x_;
-        output_mode.nYRes = im_y_;
-        output_mode.nFPS = im_fps_;
-        if ((res = image_gen_.SetMapOutputMode(output_mode)) != XN_STATUS_OK)
-        {
-            std::cerr << "RTC:OpenNI: Failed to configure image node: " <<
-                xnGetStatusString(res) << '\n';
-            return RTC::RTC_ERROR;
-        }
-        image_.fDiv = 1.0;
-    }
     if (enable_depth_ || enable_image_)
     {
         if ((res = depth_gen_.GetIntProperty("NoSampleValue", no_sample_val_))
@@ -200,6 +161,76 @@ RTC::ReturnCode_t RTCOpenNI::onActivated(RTC::UniqueId ec_id)
         depth_gen_.GetFieldOfView(fov);
         std::cout << "hFoV " << fov.fHFOV << '\n';
         std::cout << "vFoV " << fov.fVFOV << '\n';
+    }
+    if (enable_depth_)
+    {
+        std::cout << "Enabling depth\n";
+        output_mode.nXRes = dm_x_;
+        output_mode.nYRes = dm_y_;
+        output_mode.nFPS = dm_fps_;
+        if ((res = depth_gen_.SetMapOutputMode(output_mode)) != XN_STATUS_OK)
+        {
+            std::cerr << "RTC:OpenNI: Failed to configure depth node: " <<
+                xnGetStatusString(res) << '\n';
+            return RTC::RTC_ERROR;
+        }
+        depth_map_.width = dm_x_;
+        depth_map_.height = dm_y_;
+        depth_map_.bpp = 32;
+        depth_map_.format = "DEPTH";
+        depth_map_.fDiv = 1.0;
+        depth_map_.pixels.length(dm_x_ * dm_y_ * 4);
+
+        cloud_.fields.length(3);
+        cloud_.fields[0].name = "x";
+        cloud_.fields[0].offset = 0;
+        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
+        cloud_.fields[0].count = 4;
+        cloud_.fields[0].name = "y";
+        cloud_.fields[0].offset = 4;
+        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
+        cloud_.fields[0].count = 4;
+        cloud_.fields[0].name = "z";
+        cloud_.fields[0].offset = 8;
+        cloud_.fields[0].data_type = PointCloudTypes::FLOAT32;
+        cloud_.fields[0].count = 4;
+        cloud_.point_step = 12;
+        cloud_.row_step = dm_x_ * 12;
+        cloud_.is_bigendian = false;
+        cloud_.is_dense = false;
+        if ((res = depth_gen_.GetIntProperty("ZPD", depth_focal_length_)) !=
+                XN_STATUS_OK)
+        {
+            std::cerr << "RTC:OpenNI: Failed to get depth focal length: " <<
+                xnGetStatusString(res) << '\n';
+            return RTC::RTC_ERROR;
+        }
+        std::cout << "Depth focal length " << depth_focal_length_ << '\n';
+
+        // The constant value used in the back-projection of depth values
+        // C = focal_length / pixel_size / 1000.0 * ResX / 
+        // The /1000.0 bit converts from mm to m during back-projection.
+        // It is scaled by the ratio of the configured resolution to the device
+        // resolution.
+        proj_const_ = depth_focal_length_ / pixel_size_ / 1000.0 *
+            output_mode.nXRes / static_cast<float>(XN_SXGA_X_RES);
+        // The image centres used in calculating the back-projected X and Y
+        // values.
+        centre_x_ = static_cast<float>(output_mode.nXRes / 2) - 0.5f;
+        centre_y_ = static_cast<float>(output_mode.nYRes / 2) - 0.5f;
+    }
+    if (enable_image_)
+    {
+        output_mode.nXRes = im_x_;
+        output_mode.nYRes = im_y_;
+        output_mode.nFPS = im_fps_;
+        if ((res = image_gen_.SetMapOutputMode(output_mode)) != XN_STATUS_OK)
+        {
+            std::cerr << "RTC:OpenNI: Failed to configure image node: " <<
+                xnGetStatusString(res) << '\n';
+            return RTC::RTC_ERROR;
+        }
+        image_.fDiv = 1.0;
     }
 
     // Start generating data
@@ -270,7 +301,8 @@ RTC::ReturnCode_t RTCOpenNI::publish_depth()
             pixel++, dest += 4)
     {
         if (depth_md[pixel] == no_sample_val_ ||
-                depth_md[pixel] == shadow_val_)
+                depth_md[pixel] == shadow_val_ ||
+                depth_md[pixel] == 0)
         {
             depth_map_.pixels[dest] = std::numeric_limits<float>::quiet_NaN();
         }
@@ -290,10 +322,47 @@ RTC::ReturnCode_t RTCOpenNI::publish_depth()
     cloud_.height = output_mode.nXRes;
     cloud_.width = output_mode.nYRes;
     cloud_.data.length(depth_md.XRes() * depth_md.YRes() * cloud_.point_step);
-    for (unsigned int pixel = 0, dest = 0; pixel < num_pixels;
-            pixel++, dest += 12)
+    double x, y, z;
+    // Oh, how I wish for a decent CORBA API with things like iterators...
+    unsigned int dest_ii = 0;
+    unsigned int source_ii = 0;
+    for (unsigned int pixel_y = 0; pixel_y < cloud_.height; ++pixel_y)
     {
+        for (unsigned int pixel_x = 0; pixel_x < cloud_.width;
+                ++pixel_x, dest_ii += cloud_.point_step, ++source_ii)
+        {
+            // x = (X - cx).C.Z
+            // y = (Y - cy).C.Z
+            // z = Z
+            // where:
+            // x, y, z = 3D point position relative to IR camera
+            // X, Y = Unprojected coordinates (pixel x, pixel y)
+            // cx, cy = Centre of the image, calculated in onActivated()
+            // C = Constant of project, calculated in onActivated()
+            // Z = Depth measurement
+            if (depth_md[source_ii] == no_sample_val_ ||
+                    depth_md[source_ii] == shadow_val_ ||
+                    depth_md[source_ii] == 0)
+            {
+                x = std::numeric_limits<float>::quiet_NaN();
+                y = std::numeric_limits<float>::quiet_NaN();
+                z = std::numeric_limits<float>::quiet_NaN();
+            }
+            else
+            {
+                // The mm -> m scaling for x and y is handled in proj_const_
+                x = (pixel_x - centre_x_) * proj_const_ * depth_md[source_ii];
+                y = (pixel_y - centre_y_) * proj_const_ * depth_md[source_ii];
+                z = depth_md[source_ii] / 1000.0;
+            }
+            // Ugly packing of 3 floats into a byte array because it's a CORBA
+            // destination, not a PCL point cloud structure.
+            pack_float(cloud_.data, x, dest_ii);
+            pack_float(cloud_.data, y, dest_ii + 4);
+            pack_float(cloud_.data, z, dest_ii + 8);
+        }
     }
+    cloud_port_.write();
 
     return RTC::RTC_OK;
 }
