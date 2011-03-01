@@ -26,7 +26,7 @@ union f_to_c
 };
 
 
-void pack_float(_CORBA_Unbounded_Sequence_Octet &dest, float val, unsigned int offset)
+void pack_float(_CORBA_Unbounded_Sequence_Octet& dest, float val, unsigned int offset)
 {
     f_to_c temp;
     temp.val = val;
